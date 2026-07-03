@@ -1,15 +1,17 @@
 import express from 'express';
-import multer from 'multer';
-import { fileController } from '../controllers/fileController.js';
+import { chatController } from '../controllers/chatController.js';
 
 const router = express.Router();
-const upload = multer({ 
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+
+router.post('/message', chatController.sendMessage);
+router.get('/history/:chatId', chatController.getChatHistory);
+router.get('/histories', chatController.getAllChats);
+
+// Simple handler for mode updates (if needed)
+router.put('/mode/:chatId', (req, res) => {
+  res.json({ message: "Mode updates are disabled - only Friendly Mode is available" });
 });
 
-router.post('/upload', upload.single('file'), fileController.uploadFile);
-router.post('/summarize/:chatId', fileController.generateSummary);
-router.get('/summaries/:chatId', fileController.getSummaries);
+router.delete('/:chatId', chatController.deleteChat);
 
 export default router;

@@ -1,297 +1,186 @@
-import axios from 'axios';
+import axios from "axios";
 
-// Response cache to avoid repeated API calls
-const responseCache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const getCurrentDate = () => {
+  const now = new Date();
+  return now.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
-// System prompts for different modes
+  
+};
+// System prompt with explicit name memory instruction
 const SYSTEM_PROMPTS = {
-  exam: `You are MentorAI, an exam-oriented academic mentor. 
-Provide concise, structured answers focused on:
-- Key definitions and concepts
-- Important points for exams
-- Clear examples
-- Quick revision notes
-Keep answers crisp and exam-relevant.`,
+  friendly: `You are MentorAI, a helpful study assistant.
 
-  coding: `You are MentorAI, a coding mentor specializing in programming and DSA.
-Provide step-by-step explanations:
-- Break down the logic
-- Show code with proper syntax
-- Explain time and space complexity
-- Include edge cases and optimizations
-- Use examples to illustrate concepts`,
+**CRITICAL RULE: REMEMBER THE USER'S NAME**
+- If the user tells you their name, REMEMBER IT and use it in ALL future responses
+- When they ask "what is my name", you MUST tell them their name
+- Start responses with their name when appropriate
+- Example: If user says "my name is Suman", then later when they ask anything"
 
-  syllabus: `You are MentorAI, a syllabus summarizer.
-Generate structured summaries:
-- Unit-wise breakdown
-- Important topics for each unit
-- Key points to focus on
-- Study priority (High/Medium/Low)
-- Quick revision notes for exams`
+**RESPONSE STYLE:**
+• Be warm and helpful
+• Use **bold** for important terms
+• Use bullet points for lists
+• Keep explanations clear and concise
+
+**STRUCTURE:**
+[Warm greeting with name if known]
+
+[Clear answer to their question]
+
+**Key Points:**
+• Point 1
+• Point 2
+
+**IMPORTANT: TODAY'S DATE IS ${getCurrentDate()}** - Use this when users ask for the current date.
+
+**RESPONSE STYLE:**
+• Be warm and helpful
+• Use **bold** for important terms
+• Use bullet points for lists
+• Keep explanations clear and concise
+
+**STRUCTURE:**
+[Warm greeting with name if known]
+[Clear answer to their question]
+**Key Points:** (bullet list)
+
+[Follow-up suggestion]`,
 };
 
-// List of working models (in order of preference)
+// Working models
 const WORKING_MODELS = [
-  'meta-llama/llama-3-8b-instruct',  
-  'mistralai/mistral-7b-instruct',    
-  'google/gemma-7b-it',               
-  'microsoft/phi-3-mini-128k-instruct', 
+
+ "openai/gpt-oss-120b:free",
 ];
-// Configuration
+
 const MODEL_CONFIG = {
-  name: WORKING_MODELS[0], // Use first working model
-  maxTokens: 800,
+  maxTokens: 600,
   temperature: 0.5,
-  timeout: 15000
+  timeout: 10000,
 };
 
-/**
- * Try different models until one works
- */
-const tryWithFallbackModels = async (messages, config) => {
-  let lastError = null;
+const responseCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000;
 
-  for (const model of WORKING_MODELS) {
-    try {
-      console.log(`🔄 Trying model: ${model}`);
+export const generateAIResponse = async (
+  message,
+  mode = "friendly",
+  context = "",
+  history = [],
+  userInfo = null,
+) => {
+  const startTime = Date.now();
 
-      const response = await axios.post(
-        'https://openrouter.ai/api/v1/chat/completions',
-        {
-          model: model,
-          messages: messages,
-          temperature: config.temperature,
-          max_tokens: config.maxTokens,
-          top_p: 0.9
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            'HTTP-Referer': 'http://localhost:5173',
-            'X-Title': 'MentorAI',
-            'Content-Type': 'application/json'
+  try {
+    console.log(`📜 History length: ${history.length} messages`);
+    console.log(`👤 User info received:`, userInfo);
+
+    // 🔥 CRITICAL: Add explicit name instruction to system prompt
+    let systemContent = SYSTEM_PROMPTS.friendly;
+
+    if (userInfo && userInfo.name) {
+      // STRONG instruction to remember and use the name
+      systemContent = `You are MentorAI, a helpful study assistant.
+
+**IMPORTANT: THE USER'S NAME IS ${userInfo.name.toUpperCase()}**
+- You MUST remember that the user's name is ${userInfo.name}
+- Always address them as ${userInfo.name} in your responses
+- When they ask "what is my name", respond with "Your name is ${userInfo.name}!"
+- Start responses with "Hi ${userInfo.name}!" or similar
+
+**RESPONSE STYLE:**
+• Be warm and helpful
+• Use **bold** for important terms
+• Use bullet points for lists
+• Keep explanations clear and concise
+
+**STRUCTURE:**
+[Warm greeting with name]
+
+[Clear answer to their question]
+
+**Key Points:**
+• Point 1
+• Point 2
+
+[Follow-up suggestion]`;
+    }
+
+    // Prepare messages with FULL context
+    const messages = [
+      {
+        role: "system",
+        content: systemContent,
+      },
+      ...history.slice(-8), // Keep more history for context
+      {
+        role: "user",
+        content: message,
+      },
+    ];
+
+    // Log what we're sending for debugging
+    console.log(`📤 Sending ${messages.length} messages to AI`);
+    if (userInfo?.name) {
+      console.log(`✅ Name ${userInfo.name} is in system prompt`);
+    }
+
+    let aiResponse = null;
+
+    for (const model of WORKING_MODELS) {
+      try {
+        console.log(`🔄 Trying: ${model}`);
+
+        const response = await axios.post(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            model: model,
+            messages: messages,
+            temperature: MODEL_CONFIG.temperature,
+            max_tokens: MODEL_CONFIG.maxTokens,
+            top_p: 0.9,
           },
-          timeout: config.timeout
-        }
-      );
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+              "HTTP-Referer": "http://localhost:5173",
+              "X-Title": "MentorAI",
+              "Content-Type": "application/json",
+            },
+            timeout: MODEL_CONFIG.timeout,
+          },
+        );
 
-      console.log(`✅ Success with model: ${model}`);
-      return response.data.choices[0].message.content;
-
-    } catch (error) {
-      console.log(`❌ Model ${model} failed:`, error.response?.data?.error?.message || error.message);
-      lastError = error;
-      // Continue to next model
-    }
-  }
-
-  throw lastError || new Error('All models failed');
-};
-
-/**
- * Generate AI response with caching and fallback models
- */
-export const generateAIResponse = async (message, mode = 'exam', context = '') => {
-  const startTime = Date.now();
-
-  try {
-    // Create cache key
-    const cacheKey = `${mode}:${message}:${context.substring(0, 100)}`;
-
-    // Check cache first
-    if (responseCache.has(cacheKey)) {
-      const cached = responseCache.get(cacheKey);
-      if (Date.now() - cached.timestamp < CACHE_TTL) {
-        console.log(`⚡ Cache hit! Response time: ${Date.now() - startTime}ms`);
-        return cached.response;
-      }
-      responseCache.delete(cacheKey);
-    }
-
-    console.log(`🤖 Generating AI response for mode: ${mode}`);
-
-    // Prepare messages
-    const messages = [
-      {
-        role: 'system',
-        content: SYSTEM_PROMPTS[mode]
-      },
-      {
-        role: 'user',
-        content: context ? `${context}\n\nUser query: ${message}` : message
-      }
-    ];
-
-    // Try models with fallback
-    const aiResponse = await tryWithFallbackModels(messages, MODEL_CONFIG);
-
-    const responseTime = Date.now() - startTime;
-    console.log(`✅ Response generated in ${responseTime}ms`);
-
-    // Cache the response
-    responseCache.set(cacheKey, {
-      response: aiResponse,
-      timestamp: Date.now()
-    });
-
-    return aiResponse;
-
-  } catch (error) {
-    const errorTime = Date.now() - startTime;
-    console.error(`❌ API error after ${errorTime}ms:`, error.response?.data || error.message);
-
-    // Return a friendly fallback message instead of throwing
-    return "I'm having trouble connecting to the AI service right now. Please try again in a moment. If the issue persists, check your OpenRouter API key.";
-  }
-};
-
-/**
- * Generate structured summary with fallback models
- */
-export const generateSummary = async (content, mode = 'syllabus') => {
-  const startTime = Date.now();
-
-  try {
-    // Check cache for summaries
-    const cacheKey = `summary:${content.substring(0, 200)}`;
-
-    if (responseCache.has(cacheKey)) {
-      const cached = responseCache.get(cacheKey);
-      if (Date.now() - cached.timestamp < CACHE_TTL) {
-        console.log(`⚡ Summary cache hit!`);
-        return cached.response;
+        aiResponse = response.data.choices[0].message.content;
+        console.log(`✅ ${model} succeeded in ${Date.now() - startTime}ms`);
+        break;
+      } catch (error) {
+        console.log(`❌ ${model} failed:`, error.message);
       }
     }
 
-    console.log('📝 Generating summary...');
+    // Fallback with name if available
+    if (!aiResponse) {
+      console.log("💡 Using mock response");
 
-    const messages = [
-      {
-        role: 'system',
-        content: 'You are a summarizer. Generate structured summaries with unit-wise topics, key points, and exam priorities. Return valid JSON only.'
-      },
-      {
-        role: 'user',
-        content: `Summarize this content for exam preparation. Return JSON with format: { "unitWiseTopics": [{ "unit": "string", "topics": ["string"], "importance": "High/Medium/Low" }], "keyPoints": ["string"], "examPriority": [{ "topic": "string", "reason": "string", "weightage": "string" }] }\n\nContent: ${content.substring(0, 3000)}`
-      }
-    ];
-
-    // Try models with fallback for summary
-    const summaryText = await tryWithFallbackModels(messages, {
-      ...MODEL_CONFIG,
-      maxTokens: 1000,
-      temperature: 0.3
-    });
-
-    let summary;
-
-    // Parse JSON response
-    try {
-      summary = JSON.parse(summaryText);
-    } catch (e) {
-      console.error('Failed to parse JSON, trying to extract');
-      // Extract JSON from text if wrapped in markdown
-      const jsonMatch = summaryText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        summary = JSON.parse(jsonMatch[0]);
+      if (userInfo?.name) {
+        aiResponse = `Hi ${userInfo.name}! 😊 I'm having connection issues. Please try your question again in a moment.`;
       } else {
-        throw new Error('Invalid JSON response');
+        aiResponse = `Hi there! 😊 I'm having connection issues. Please try your question again in a moment.`;
       }
     }
 
-    const responseTime = Date.now() - startTime;
-    console.log(`✅ Summary generated in ${responseTime}ms`);
-
-    // Cache the summary
-    responseCache.set(cacheKey, {
-      response: summary,
-      timestamp: Date.now()
-    });
-
-    return summary;
-
+    console.log(`✅ Total time: ${Date.now() - startTime}ms`);
+    return aiResponse;
   } catch (error) {
-    console.error('Summary generation error:', error);
-
-    // Return structured fallback
-    return {
-      unitWiseTopics: [
-        {
-          unit: 'Main Topics',
-          topics: ['Content analysis in progress'],
-          importance: 'High'
-        }
-      ],
-      keyPoints: [
-        'Summary generation in progress',
-        'Please try again for detailed analysis'
-      ],
-      examPriority: [
-        {
-          topic: 'Key Concepts',
-          reason: 'Fundamental to understanding',
-          weightage: 'High'
-        }
-      ]
-    };
-  }
-};
-
-/**
- * Clear the response cache
- */
-export const clearCache = () => {
-  responseCache.clear();
-  console.log('🗑️ Cache cleared');
-};
-
-/**
- * Get cache statistics
- */
-export const getCacheStats = () => {
-  return {
-    size: responseCache.size,
-    keys: Array.from(responseCache.keys())
-  };
-};
-
-/**
- * Test all models to find which work
- */
-export const testAllModels = async () => {
-  const results = [];
-
-  for (const model of WORKING_MODELS) {
-    try {
-      const start = Date.now();
-      await axios.post(
-        'https://openrouter.ai/api/v1/chat/completions',
-        {
-          model: model,
-          messages: [{ role: 'user', content: 'Say "ok" in one word' }],
-          max_tokens: 5
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            'HTTP-Referer': 'http://localhost:5173',
-            'X-Title': 'MentorAI'
-          },
-          timeout: 5000
-        }
-      );
-      const time = Date.now() - start;
-      results.push({ model, status: '✅ Working', time: `${time}ms` });
-    } catch (error) {
-      results.push({
-        model,
-        status: '❌ Failed',
-        error: error.response?.data?.error?.message || error.message
-      });
+    console.error("❌ Error:", error);
+    if (userInfo?.name) {
+      return `Hi ${userInfo.name}! I'm experiencing technical issues. Please try again.`;
     }
+    return `Hi there! I'm experiencing technical issues. Please try again.`;
   }
-
-  console.table(results);
-  return results;
 };

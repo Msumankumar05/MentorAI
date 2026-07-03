@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
-import { MessageSquare, Trash2, GraduationCap, Code, BookOpen } from 'lucide-react';
+import { MessageSquare, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { cn } from '../utils/cn';
@@ -41,23 +41,10 @@ const History = () => {
     }
   };
 
-  const getModeIcon = (mode) => {
-    switch(mode) {
-      case 'exam': return <GraduationCap size={16} className="text-primary-400" />;
-      case 'coding': return <Code size={16} className="text-green-400" />;
-      case 'syllabus': return <BookOpen size={16} className="text-purple-400" />;
-      default: return null;
-    }
-  };
+  // Only Friendly Mode now
+  const getModeIcon = () => <MessageSquare size={16} className="text-blue-400" />;
 
-  const getModeColor = (mode) => {
-    switch(mode) {
-      case 'exam': return 'bg-primary-600/20 text-primary-400';
-      case 'coding': return 'bg-green-600/20 text-green-400';
-      case 'syllabus': return 'bg-purple-600/20 text-purple-400';
-      default: return 'bg-dark-border text-dark-muted';
-    }
-  };
+  const getModeColor = () => 'bg-blue-600/20 text-blue-400';
 
   if (loading) {
     return (
@@ -100,13 +87,12 @@ const History = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      {getModeIcon(chat.mode)}
+                      {getModeIcon()}
                       <span className={cn(
                         "text-xs px-2 py-1 rounded-full",
-                        getModeColor(chat.mode)
+                        getModeColor()
                       )}>
-                        {chat.mode === 'exam' ? 'Exam Mode' : 
-                         chat.mode === 'coding' ? 'Coding Mode' : 'Syllabus Mode'}
+                        Friendly Mode
                       </span>
                       <span className="text-xs text-dark-muted">
                         {formatDistanceToNow(new Date(chat.updatedAt), { addSuffix: true })}

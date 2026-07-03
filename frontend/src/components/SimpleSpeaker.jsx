@@ -65,25 +65,25 @@ const SimpleSpeaker = ({ text }) => {
   };
 
   return (
-    <div className="flex items-center gap-1">
-      {!isSpeaking ? (
-        <button
-          onClick={speak}
-          className="p-2 rounded-full hover:bg-primary-600/20 text-primary-400 transition-colors"
-          title="Read aloud"
-        >
-          <Volume2 size={18} />
-        </button>
-      ) : (
-        <button
-          onClick={stop}
-          className="p-2 rounded-full hover:bg-red-500/20 text-red-400 transition-colors"
-          title="Stop"
-        >
-          <VolumeX size={18} />
-        </button>
-      )}
-    </div>
+    // <div className="flex items-center gap-1">
+    //   {!isSpeaking ? (
+    //     <button
+    //       onClick={speak}
+    //       className="p-2 rounded-full hover:bg-primary-600/20 text-primary-400 transition-colors"
+    //       title="Read aloud"
+    //     >
+    //       <Volume2 size={18} />
+    //     </button>
+    //   ) : (
+    //     <button
+    //       onClick={stop}
+    //       className="p-2 rounded-full hover:bg-red-500/20 text-red-400 transition-colors"
+    //       title="Stop"
+    //     >
+    //       <VolumeX size={18} />
+    //     </button>
+    //   )}
+    // </div>
   );
 };
 

@@ -1,21 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  MessageSquare, 
-  History, 
-  Settings, 
+import {
+  MessageSquare,
+  History,
+  Settings,
   Plus,
   ChevronLeft,
   ChevronRight,
-  GraduationCap,
-  Code,
-  BookOpen,
   User,
+  Search,
+  Sparkles,
+  Clock,
+  Trash2,
   LogOut,
-  ChevronDown,
-  CreditCard,
-  HelpCircle
 } from 'lucide-react';
 import axios from 'axios';
 import { cn } from '../utils/cn';
@@ -24,409 +22,295 @@ import toast from 'react-hot-toast';
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [chats, setChats] = useState([]);
-  const [mode, setMode] = useState('exam');
-  const [isAccountOpen, setIsAccountOpen] = useState(false);
-  const [user, setUser] = useState({
-    name: 'M Suman Kumar',
-    email: 'ms.@example.com',
-    avatar: 'JD',
-    plan: 'Free',
-    usage: 45,
-    usageLimit: 100
-  });
-  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredChats, setFilteredChats] = useState([]);
+  const [user] = useState({ name: 'M Suman Kumar', avatar: 'MS', plan: 'Pro' });
+
   const navigate = useNavigate();
   const location = useLocation();
 
+  useEffect(() => { fetchChats(); }, []);
+
   useEffect(() => {
-    fetchChats();
-  }, []);
+    if (searchQuery.trim() === '') {
+      setFilteredChats(chats);
+    } else {
+      setFilteredChats(chats.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase())));
+    }
+  }, [searchQuery, chats]);
 
   const fetchChats = async () => {
     try {
-      const response = await axios.get('/api/chat/histories');
-      setChats(response.data);
-    } catch (error) {
-      console.error('Failed to fetch chats:', error);
+      const res = await axios.get('/api/chat/histories');
+      setChats(res.data);
+      setFilteredChats(res.data);
+    } catch { /* silent */ }
+  };
+
+  const createNewChat = () => { navigate('/'); };
+
+  const deleteChat = async (chatId, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm('Delete this chat?')) return;
+    try {
+      await axios.delete(`/api/chat/${chatId}`);
+      setChats(prev => prev.filter(c => c._id !== chatId));
+      toast.success('Chat deleted');
+    } catch {
+      toast.error('Failed to delete');
     }
   };
 
-  const createNewChat = () => {
-    navigate('/');
-    toast.success('New chat created');
+  const formatDate = (date) => {
+    const diff = Math.ceil(Math.abs(new Date() - new Date(date)) / (1000 * 60 * 60 * 24));
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    if (diff < 7) return `${diff}d ago`;
+    return new Date(date).toLocaleDateString();
   };
 
-  const handleLogout = () => {
-    toast.success('Logged out successfully');
-    // Add your logout logic here
-  };
-
-  const modes = [
-    { id: 'exam', label: 'Exam Focus', icon: GraduationCap, color: 'text-primary-400' },
-    { id: 'coding', label: 'Coding Mentor', icon: Code, color: 'text-green-400' },
-    { id: 'syllabus', label: 'Syllabus Mode', icon: BookOpen, color: 'text-purple-400' },
-  ];
-
-  // Animation variants
-  const sidebarVariants = {
-    expanded: { width: '280px' },
-    collapsed: { width: '80px' }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: { opacity: 1, x: 0 }
-  };
-
-  const accountMenuVariants = {
-    hidden: { opacity: 0, height: 0, y: -10 },
-    visible: { opacity: 1, height: 'auto', y: 0 }
-  };
+  const sidebarW = isCollapsed ? '72px' : '260px';
 
   return (
     <motion.aside
-      initial={false}
-      animate={isCollapsed ? 'collapsed' : 'expanded'}
-      variants={sidebarVariants}
+      animate={{ width: sidebarW }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="relative h-screen glass-card flex flex-col overflow-hidden"
+      className="relative h-screen flex flex-col overflow-hidden flex-shrink-0"
+      style={{
+        background: '#0f1d25',
+        borderRight: '1px solid #1e2d38',
+        width: sidebarW,
+      }}
     >
-      {/* Toggle button */}
+      {/* Toggle */}
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-20 bg-dark-card border border-dark-border rounded-full p-1 hover:bg-dark-border transition-colors z-10"
+        className="absolute -right-3 top-20 z-20 w-6 h-6 rounded-full flex items-center justify-center"
+        style={{
+          background: '#111b22',
+          border: '1px solid #1e2d38',
+          color: '#00e5c0',
+        }}
       >
-        <motion.div
-          animate={{ rotate: isCollapsed ? 180 : 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </motion.div>
+        {isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
       </motion.button>
 
       {/* Logo */}
-      <motion.div 
-        className={cn(
-          "p-4 border-b border-dark-border",
-          isCollapsed ? "text-center" : ""
-        )}
-        layout
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      <div
+        className="flex items-center gap-3 px-4 py-5"
+        style={{ borderBottom: '1px solid #1e2d38' }}
       >
-        <motion.h1 
-          className={cn(
-            "font-bold bg-gradient-to-r from-primary-400 to-purple-400 bg-clip-text text-transparent",
-            isCollapsed ? "text-xl" : "text-2xl"
-          )}
-          layout
+        <div
+          className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{
+            background: 'linear-gradient(135deg, #00e5c0 0%, #00a88d 100%)',
+            boxShadow: '0 0 14px rgba(0,229,192,0.3)',
+          }}
         >
-          {isCollapsed ? "M" : "MentorAI"}
-        </motion.h1>
-      </motion.div>
-
-      {/* New Chat Button */}
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={createNewChat}
-        className="mx-2 mt-4 p-3 glass-card hover:bg-dark-border/50 transition-all flex items-center gap-3 group"
-        layout
-      >
-        <motion.div
-          whileHover={{ rotate: 90 }}
-          transition={{ duration: 0.2 }}
-        >
-          <Plus size={20} className="text-primary-400" />
-        </motion.div>
+          <Sparkles size={16} color="#0c1419" />
+        </div>
         <AnimatePresence>
           {!isCollapsed && (
-            <motion.span
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              className="text-sm whitespace-nowrap"
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
             >
-              New Chat
-            </motion.span>
+              <p className="font-bold text-sm" style={{ color: '#f0f7f4', fontFamily: "'Space Grotesk', sans-serif" }}>
+                MentorAI
+              </p>
+              <p className="text-xs" style={{ color: '#6b8a94' }}>Study Assistant</p>
+            </motion.div>
           )}
         </AnimatePresence>
-      </motion.button>
+      </div>
 
-      {/* Mode Selector */}
-      <AnimatePresence>
+      {/* New Chat */}
+      <div className="px-3 pt-4">
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={createNewChat}
+          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all"
+          style={{
+            background: 'linear-gradient(135deg, #00e5c0 0%, #00c9a8 100%)',
+            color: '#0c1419',
+            fontWeight: 600,
+            fontSize: 14,
+            boxShadow: '0 4px 14px rgba(0,229,192,0.25)',
+            justifyContent: isCollapsed ? 'center' : 'flex-start',
+          }}
+        >
+          <Plus size={18} />
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.span
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                className="whitespace-nowrap overflow-hidden"
+              >
+                New Chat
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </motion.button>
+      </div>
+
+      {/* Search */}
+      {!isCollapsed && (
+        <div className="px-3 mt-3">
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#6b8a94' }} />
+            <input
+              type="text"
+              placeholder="Search chats..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-2 rounded-xl text-sm focus:outline-none transition-colors"
+              style={{
+                background: 'rgba(17,27,34,0.8)',
+                border: '1px solid #1e2d38',
+                color: '#f0f7f4',
+                fontSize: 13,
+              }}
+              onFocus={e => e.target.style.borderColor = 'rgba(0,229,192,0.35)'}
+              onBlur={e => e.target.style.borderColor = '#1e2d38'}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Chat list */}
+      <div className="flex-1 overflow-y-auto mt-4 px-3">
         {!isCollapsed && (
-          <motion.div 
-            className="px-2 mt-4 space-y-1"
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            variants={{
-              hidden: { opacity: 0 },
-              visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
-            }}
-          >
-            {modes.map((m) => {
-              const IconComponent = m.icon;
-              return (
-                <motion.button
-                  key={m.id}
-                  variants={itemVariants}
-                  whileHover={{ x: 5 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setMode(m.id)}
-                  className={cn(
-                    "w-full p-2 rounded-lg flex items-center gap-3 transition-all",
-                    mode === m.id 
-                      ? "bg-primary-600/20 text-primary-400 border border-primary-500/30" 
-                      : "hover:bg-dark-border/50 text-dark-muted"
-                  )}
-                >
-                  <IconComponent size={18} className={m.color} />
-                  <span className="text-sm">{m.label}</span>
-                </motion.button>
-              );
-            })}
-          </motion.div>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-2 px-1" style={{ color: '#6b8a94' }}>
+            Recent Chats
+          </p>
         )}
-      </AnimatePresence>
-
-      {/* Chat History */}
-      <AnimatePresence>
-        {!isCollapsed && (
-          <motion.div 
-            className="flex-1 overflow-y-auto mt-4 px-2"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <h3 className="text-xs font-semibold text-dark-muted uppercase tracking-wider mb-2 px-2">
-              Recent Chats
-            </h3>
-            <div className="space-y-1">
-              <AnimatePresence>
-                {chats.slice(0, 5).map((chat, index) => (
-                  <motion.div
-                    key={chat._id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ delay: index * 0.05 }}
+        <div className="space-y-0.5">
+          {filteredChats.slice(0, 10).map((chat) => {
+            const isActive = location.pathname.includes(chat._id);
+            return (
+              <Link key={chat._id} to={`/chat/${chat._id}`} className="block group">
+                <motion.div
+                  whileHover={{ x: isCollapsed ? 0 : 3 }}
+                  className="p-2.5 rounded-xl flex items-center gap-3 relative transition-all"
+                  style={{
+                    background: isActive ? 'rgba(0,229,192,0.08)' : 'transparent',
+                    border: isActive ? '1px solid rgba(0,229,192,0.2)' : '1px solid transparent',
+                  }}
+                  onMouseEnter={e => {
+                    if (!isActive) e.currentTarget.style.background = 'rgba(30,45,56,0.5)';
+                  }}
+                  onMouseLeave={e => {
+                    if (!isActive) e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'rgba(30,45,56,0.6)' }}
                   >
-                    <Link
-                      to={`/chat/${chat._id}`}
-                      className="block"
-                    >
+                    <MessageSquare size={13} style={{ color: isActive ? '#00e5c0' : '#6b8a94' }} />
+                  </div>
+
+                  <AnimatePresence>
+                    {!isCollapsed && (
                       <motion.div
-                        whileHover={{ x: 5, backgroundColor: 'rgba(255,255,255,0.05)' }}
-                        className={cn(
-                          "p-2 rounded-lg transition-all",
-                          location.pathname.includes(chat._id) && "bg-dark-border/30"
-                        )}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex-1 min-w-0"
                       >
-                        <div className="flex items-center gap-3">
-                          <MessageSquare size={16} className="text-dark-muted" />
-                          <span className="text-sm truncate">{chat.title}</span>
+                        <p className="text-xs font-medium truncate" style={{ color: '#f0f7f4' }}>
+                          {chat.title}
+                        </p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Clock size={9} style={{ color: '#6b8a94' }} />
+                          <p className="text-[11px]" style={{ color: '#6b8a94' }}>{formatDate(chat.updatedAt)}</p>
                         </div>
                       </motion.div>
-                    </Link>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                    )}
+                  </AnimatePresence>
 
-      {/* Bottom Navigation - Account & Settings */}
-      <motion.div 
-        className="border-t border-dark-border mt-auto"
-        layout
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      >
-        {/* Account Section */}
-        <AnimatePresence>
-          {!isCollapsed ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="p-2"
-            >
-              <motion.button
-                whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
-                onClick={() => setIsAccountOpen(!isAccountOpen)}
-                className="w-full p-2 rounded-lg flex items-center gap-3 transition-all"
-              >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-600 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
-                  {user.avatar}
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="text-sm font-medium">{user.name}</p>
-                  <p className="text-xs text-dark-muted">{user.plan} Plan</p>
-                </div>
-                <motion.div
-                  animate={{ rotate: isAccountOpen ? 180 : 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <ChevronDown size={16} className="text-dark-muted" />
+                  {!isCollapsed && (
+                    <button
+                      onClick={e => deleteChat(chat._id, e)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded"
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.15)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <Trash2 size={12} style={{ color: '#6b8a94' }} />
+                    </button>
+                  )}
                 </motion.div>
-              </motion.button>
+              </Link>
+            );
+          })}
 
-              {/* Account Dropdown Menu */}
-              <AnimatePresence>
-                {isAccountOpen && (
-                  <motion.div
-                    variants={accountMenuVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="hidden"
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-1 space-y-1 pl-11">
-                      {/* Usage Bar */}
-                      <div className="py-2">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="text-dark-muted">Daily usage</span>
-                          <span className="text-primary-400">{user.usage}/{user.usageLimit}</span>
-                        </div>
-                        <div className="h-1 bg-dark-border rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${(user.usage / user.usageLimit) * 100}%` }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                            className="h-full bg-gradient-to-r from-primary-500 to-purple-500 rounded-full"
-                          />
-                        </div>
-                      </div>
-
-                      <motion.button
-                        whileHover={{ x: 5 }}
-                        className="w-full p-2 rounded-lg hover:bg-dark-border/50 transition-all flex items-center gap-3 text-sm"
-                      >
-                        <User size={16} className="text-dark-muted" />
-                        <span>Profile</span>
-                      </motion.button>
-
-                      <motion.button
-                        whileHover={{ x: 5 }}
-                        className="w-full p-2 rounded-lg hover:bg-dark-border/50 transition-all flex items-center gap-3 text-sm"
-                      >
-                        <CreditCard size={16} className="text-dark-muted" />
-                        <span>Billing</span>
-                      </motion.button>
-
-                      <motion.button
-                        whileHover={{ x: 5 }}
-                        className="w-full p-2 rounded-lg hover:bg-dark-border/50 transition-all flex items-center gap-3 text-sm"
-                      >
-                        <HelpCircle size={16} className="text-dark-muted" />
-                        <span>Help & Support</span>
-                      </motion.button>
-
-                      <motion.button
-                        whileHover={{ x: 5 }}
-                        onClick={handleLogout}
-                        className="w-full p-2 rounded-lg hover:bg-red-500/20 transition-all flex items-center gap-3 text-sm text-red-400"
-                      >
-                        <LogOut size={16} />
-                        <span>Logout</span>
-                      </motion.button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="p-2 flex justify-center"
-            >
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setIsAccountOpen(!isAccountOpen)}
-                className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-600 to-purple-600 flex items-center justify-center text-white font-semibold"
-                title="Account"
-              >
-                {user.avatar}
-              </motion.button>
-            </motion.div>
+          {filteredChats.length === 0 && !isCollapsed && (
+            <p className="text-xs text-center py-6" style={{ color: '#6b8a94' }}>No chats yet</p>
           )}
-        </AnimatePresence>
+        </div>
+      </div>
 
-        {/* Settings Link */}
-        <motion.div 
-          className={cn(
-            "p-2",
-            isCollapsed ? "text-center" : ""
-          )}
-          layout
-        >
-          <Link
-            to="/settings"
-            className={cn(
-              "flex items-center gap-3 p-2 rounded-lg hover:bg-dark-border/50 transition-all",
-              location.pathname === '/settings' && "bg-dark-border/30"
-            )}
+      {/* Bottom nav */}
+      <div
+        className="p-3"
+        style={{ borderTop: '1px solid #1e2d38' }}
+      >
+        {/* User row */}
+        <div className="flex items-center gap-3 p-2 rounded-xl mb-2" style={{ background: 'rgba(17,27,34,0.6)' }}>
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-xs font-bold"
+            style={{
+              background: 'linear-gradient(135deg, #00e5c0 0%, #00a88d 100%)',
+              color: '#0c1419',
+            }}
           >
-            <motion.div
-              whileHover={{ rotate: 45 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Settings size={18} className="text-dark-muted" />
-            </motion.div>
-            <AnimatePresence>
-              {!isCollapsed && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: 'auto' }}
-                  exit={{ opacity: 0, width: 0 }}
-                  className="text-sm whitespace-nowrap"
-                >
-                  Settings
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </Link>
-        </motion.div>
+            {user.avatar}
+          </div>
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.div
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                className="flex-1 min-w-0 overflow-hidden"
+              >
+                <p className="text-xs font-semibold truncate" style={{ color: '#f0f7f4' }}>{user.name}</p>
+                <p className="text-[11px]" style={{ color: '#6b8a94' }}>{user.plan} Plan</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-        {/* History Link */}
-        <motion.div 
-          className={cn(
-            "p-2 pt-0",
-            isCollapsed ? "text-center" : ""
-          )}
-          layout
-        >
+        {/* Nav links */}
+        <div className="flex gap-1">
           <Link
             to="/history"
-            className={cn(
-              "flex items-center gap-3 p-2 rounded-lg hover:bg-dark-border/50 transition-all",
-              location.pathname === '/history' && "bg-dark-border/30"
-            )}
+            className="flex-1 flex items-center justify-center gap-2 p-2 rounded-lg transition-all text-xs"
+            style={{
+              color: location.pathname === '/history' ? '#00e5c0' : '#6b8a94',
+              background: location.pathname === '/history' ? 'rgba(0,229,192,0.08)' : 'transparent',
+            }}
           >
-            <History size={18} className="text-dark-muted" />
-            <AnimatePresence>
-              {!isCollapsed && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: 'auto' }}
-                  exit={{ opacity: 0, width: 0 }}
-                  className="text-sm whitespace-nowrap"
-                >
-                  History
-                </motion.span>
-              )}
-            </AnimatePresence>
+            <History size={15} />
+            {!isCollapsed && <span>History</span>}
           </Link>
-        </motion.div>
-      </motion.div>
+          <Link
+            to="/settings"
+            className="flex-1 flex items-center justify-center gap-2 p-2 rounded-lg transition-all text-xs"
+            style={{ color: '#6b8a94' }}
+          >
+            <Settings size={15} />
+            {!isCollapsed && <span>Settings</span>}
+          </Link>
+        </div>
+      </div>
     </motion.aside>
   );
 };

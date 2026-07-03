@@ -46,11 +46,11 @@ const SpeechButton = ({ text }) => {
     if (error) {
         return (
             <button
-                className="p-1.5 rounded-full text-red-500/60 hover:text-red-500 transition-colors"
+                className="p-1 rounded hover:bg-red-500/20 transition-colors"
                 title={error}
                 onClick={() => setError(null)}
             >
-                <AlertCircle size={14} />
+                <AlertCircle size={12} className="text-red-400" />
             </button>
         );
     }
@@ -59,18 +59,18 @@ const SpeechButton = ({ text }) => {
         <button
             onClick={handleToggleSpeak}
             className={`
-        p-1.5 rounded-full transition-all duration-200
+        p-1 rounded hover:bg-dark-border transition-all duration-200
         ${isSpeaking
-                    ? 'bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 shadow-sm shadow-primary-500/20'
-                    : 'hover:bg-dark-border/50 text-dark-muted hover:text-primary-400'
-                }
+                ? 'bg-primary-500/20 text-primary-400'
+                : 'text-dark-muted hover:text-primary-400'
+            }
       `}
             title={isSpeaking ? 'Stop' : 'Read aloud'}
         >
             {isSpeaking ? (
-                <VolumeX size={14} className="animate-pulse" />
+                <VolumeX size={12} className="animate-pulse" />
             ) : (
-                <Volume2 size={14} />
+                <Volume2 size={12} />
             )}
         </button>
     );

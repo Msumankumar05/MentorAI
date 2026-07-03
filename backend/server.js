@@ -38,14 +38,14 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 //   useNewUrlParser: true,
 //   useUnifiedTopology: true
 // })
-// .then(() => console.log('✅ MongoDB connected'))
+// .then(() => console.log('MongoDB connected'))
 // .catch(err => console.error('MongoDB connection error:', err));
 
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ MongoDB connected successfully'))
+  .then(() => console.log('MongoDB connected successfully'))
   .catch(err => {
-    console.error('❌ MongoDB connection error:', err.message);
-    console.log('🔍 Check your username and password in .env file');
+    console.error('MongoDB connection error:', err.message);
+    console.log('Check your username and password in .env file');
   });
 
 // Routes
@@ -63,5 +63,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

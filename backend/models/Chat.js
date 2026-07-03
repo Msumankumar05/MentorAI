@@ -16,30 +16,53 @@ const messageSchema = new mongoose.Schema({
   }
 });
 
+const userInfoSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    default: null
+  },
+  preferredName: {
+    type: String,
+    default: null
+  },
+  topics: [String],
+  lastActive: {
+    type: Date,
+    default: Date.now
+  }
+});
+
 const chatSchema = new mongoose.Schema({
   userId: {
     type: String,
     default: 'anonymous'
   },
+  userInfo: {
+    type: userInfoSchema,
+    default: () => ({})
+  },
   title: {
     type: String,
     default: 'New Chat'
   },
-  messages: [messageSchema],
+  messages: {
+    type: [messageSchema],
+    default: []
+  },
   mode: {
     type: String,
-    enum: ['exam', 'coding', 'syllabus'],
-    default: 'exam'
+    enum: ['friendly'],
+    default: 'friendly'
   },
-  fileContext: [{
-    fileName: String,
-    fileType: String,
-    content: String,
-    uploadDate: {
-      type: Date,
-      default: Date.now
-    }
-  }],
+  fileContext: {
+    type: [{
+      fileName: String,
+      fileType: String,
+      content: String,
+      uploadDate: { type: Date, default: Date.now }
+    }],
+    default: []
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -50,8 +73,12 @@ const chatSchema = new mongoose.Schema({
   }
 });
 
+// Update timestamps before saving
 chatSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
+  if (this.userInfo) {
+    this.userInfo.lastActive = Date.now();
+  }
   next();
 });
 

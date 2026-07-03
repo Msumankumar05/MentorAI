@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 export const useChat = (chatId) => {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState('exam');
+  const [mode, setMode] = useState('friendly'); // instead of 'exam'
   const [fileContext, setFileContext] = useState([]);
   const [error, setError] = useState(null);
 

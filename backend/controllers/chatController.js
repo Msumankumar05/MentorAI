@@ -1,58 +1,79 @@
-import Chat from '../models/Chat.js';
-import { generateAIResponse } from '../services/aiService.js';
-import { extractTextFromFile } from '../services/fileService.js';
+import Chat from "../models/Chat.js";
+import { generateAIResponse } from "../services/aiService.js";
 
 export const chatController = {
+  // Send a message and get AI response
   sendMessage: async (req, res) => {
     try {
-      const { message, chatId, mode, fileContext } = req.body;
-      
+      const { message, chatId, fileContext } = req.body;
+
       let chat;
       if (chatId) {
         chat = await Chat.findById(chatId);
         if (!chat) {
-          return res.status(404).json({ error: 'Chat not found' });
+          return res.status(404).json({ error: "Chat not found" });
         }
       } else {
+        // Create new chat
         chat = new Chat({
           messages: [],
-          mode: mode || 'exam'
+          mode: "friendly",
+          title: "New Chat",
+          fileContext: [],
+          userInfo: { name: null, preferredName: null }
         });
       }
 
       // Add user message
-      chat.messages.push({
-        role: 'user',
-        content: message
-      });
+      const userMessage = {
+        role: "user",
+        content: message,
+        timestamp: new Date()
+      };
+      chat.messages.push(userMessage);
 
-      // Prepare context from files if any
-      let contextMessage = '';
+      // Prepare file context if any
+      let contextMessage = "";
       if (fileContext && fileContext.length > 0) {
-        contextMessage = 'Based on the uploaded files:\n';
-        fileContext.forEach(file => {
-          contextMessage += `File: ${file.fileName}\nContent: ${file.content}\n\n`;
+        contextMessage = "Based on the uploaded files:\n";
+        fileContext.forEach(f => {
+          contextMessage += `File: ${f.fileName}\nContent: ${f.content}\n\n`;
         });
       }
 
-      // Generate AI response
+      // Extract previous messages for history (excluding current)
+      const conversationHistory = chat.messages
+        .slice(0, -1)
+        .map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }));
+
+      console.log(`📤 Sending ${conversationHistory.length} previous messages as history`);
+
+      // Generate AI response with full history
       const aiResponse = await generateAIResponse(
         message,
-        mode,
-        contextMessage
+        "friendly",
+        contextMessage,
+        conversationHistory,
+        chat.userInfo
       );
 
       // Add AI response
-      chat.messages.push({
-        role: 'assistant',
-        content: aiResponse
-      });
+      const assistantMessage = {
+        role: "assistant",
+        content: aiResponse,
+        timestamp: new Date()
+      };
+      chat.messages.push(assistantMessage);
 
-      // Update title if this is the first message
+      // Update title if first exchange (user + assistant = 2 messages)
       if (chat.messages.length === 2) {
-        chat.title = message.substring(0, 50) + (message.length > 50 ? '...' : '');
+        chat.title = message.substring(0, 50) + (message.length > 50 ? "..." : "");
       }
 
+      chat.updatedAt = new Date();
       await chat.save();
 
       res.json({
@@ -60,67 +81,50 @@ export const chatController = {
         response: aiResponse,
         messages: chat.messages
       });
+
     } catch (error) {
-      console.error('Chat error:', error);
-      res.status(500).json({ error: 'Failed to process message' });
+      console.error("Chat error:", error);
+      res.status(500).json({ error: error.message });
     }
   },
 
+  // Get chat history by ID
   getChatHistory: async (req, res) => {
     try {
       const { chatId } = req.params;
       const chat = await Chat.findById(chatId);
-      
       if (!chat) {
-        return res.status(404).json({ error: 'Chat not found' });
+        return res.status(404).json({ error: "Chat not found" });
       }
-
       res.json(chat);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch chat history' });
+      console.error("Get chat history error:", error);
+      res.status(500).json({ error: "Failed to fetch chat history" });
     }
   },
 
+  // Get all chats (summary list)
   getAllChats: async (req, res) => {
     try {
       const chats = await Chat.find({})
         .sort({ updatedAt: -1 })
-        .select('_id title mode updatedAt');
-      
+        .select("_id title mode updatedAt messages userInfo");
       res.json(chats);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch chats' });
+      console.error("Get all chats error:", error);
+      res.status(500).json({ error: "Failed to fetch chats" });
     }
   },
 
-  updateMode: async (req, res) => {
-    try {
-      const { chatId } = req.params;
-      const { mode } = req.body;
-
-      const chat = await Chat.findByIdAndUpdate(
-        chatId,
-        { mode },
-        { new: true }
-      );
-
-      if (!chat) {
-        return res.status(404).json({ error: 'Chat not found' });
-      }
-
-      res.json(chat);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to update mode' });
-    }
-  },
-
+  // Delete a chat
   deleteChat: async (req, res) => {
     try {
       const { chatId } = req.params;
       await Chat.findByIdAndDelete(chatId);
-      res.json({ message: 'Chat deleted successfully' });
+      res.json({ message: "Chat deleted successfully" });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to delete chat' });
+      console.error("Delete chat error:", error);
+      res.status(500).json({ error: "Failed to delete chat" });
     }
   }
 };
