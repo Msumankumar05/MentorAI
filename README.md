@@ -13,29 +13,20 @@ An AI-powered chatbot for students focused on exam preparation and coding learni
 - 💻 Syntax highlighting for code blocks
 - 📚 Chat history and management
 
-## 🛠️ Tech Stack
 
-**Frontend:**
-- React + Vite
-- Tailwind CSS
-- Framer Motion
-- shadcn/ui
+---
 
-**Backend:**
-- Node.js + Express
-- MongoDB Atlas
-- OpenRouter AI API
+## © Copyright & Usage
 
-## 🚀 Getting Started
+**Copyright © 2026 Makoju Suman Kumar. All rights reserved.**
 
-### Prerequisites
-- Node.js (v18+)
-- MongoDB Atlas account (or local MongoDB)
-- OpenRouter API key
+This repository and its original source code, documentation, designs, and original assets are proprietary and are provided publicly for **viewing and evaluation purposes only**.
 
-### Installation
+No permission is granted to **copy, modify, reproduce, distribute, republish, or reuse** the original contents of this repository, in whole or in part, without prior written permission from the copyright holder.
 
-1. Clone the repository
-```bash
-git clone https://github.com/YOUR_USERNAME/mentorai.git
-cd mentorai
+Third-party libraries, frameworks, APIs, and other materials remain subject to their respective licenses and terms.
+
+For permission requests, please contact the repository owner through:
+
+**https://itsmsk.vercel.app/**
+
